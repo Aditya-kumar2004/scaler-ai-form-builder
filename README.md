@@ -447,10 +447,9 @@ At the time of submission, no known blockers were found in the implemented assig
 
 ## Deployment
 
-Deployment URLs will be added after deployment:
-
-- **Frontend Deployment**: `TODO: Add deployed frontend URL`
-- **Backend Deployment**: `TODO: Add deployed backend URL`
+- **Frontend Deployment (Vercel)**: [https://scaler-ai-form-builder.vercel.app](https://scaler-ai-form-builder.vercel.app)
+- **Backend Deployment (Render API)**: [https://scaler-form-builder-api.onrender.com/api/](https://scaler-form-builder-api.onrender.com/api/)
+- **Live Form Builder Dashboard**: [https://scaler-ai-form-builder.vercel.app/dashboard](https://scaler-ai-form-builder.vercel.app/dashboard)
 
 ---
 
