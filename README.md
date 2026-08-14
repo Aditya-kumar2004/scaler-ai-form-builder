@@ -6,6 +6,14 @@ The project allows form creators to build, reorder, customize, and publish forms
 
 ---
 
+## 🌐 Live Deployment
+
+- **Frontend (Live Application)**: [https://scaler-ai-form-builder.vercel.app](https://scaler-ai-form-builder.vercel.app)
+- **Backend (REST API)**: [https://scaler-form-builder-api.onrender.com/api/](https://scaler-form-builder-api.onrender.com/api/)
+- **Forms Endpoint**: [https://scaler-form-builder-api.onrender.com/api/forms/](https://scaler-form-builder-api.onrender.com/api/forms/)
+
+---
+
 ## Features
 
 ### Creator / Admin Features
