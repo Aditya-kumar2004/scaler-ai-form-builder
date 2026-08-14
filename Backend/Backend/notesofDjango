@@ -1,0 +1,361 @@
+too install thee (env):-python -m venv venv
+tto activatee thsii environment :-venv\Scripts\activate
+too Install thisss theee django:- python -m install django (or) pip install django
+too upgrGEE TO DJANGOO:- PYTHON -M PIP INSTALL --UPGRADE
+TOO SEE THEE VERSION OFF THEE DJANO:-django-admin --version
+TOO MAKEE A PROJECT:-django-admin startproject myproject
+too ssee all thee dependenciess which hass een installed in thee file :-pip freeze
+noww createe youu own folder namee project :-django-admin startproject myproject
+then goo tohh myy project folder by :-cd myproject
+thiss commanad diss ude runn thee server :-python manage.py runserver
+
+
+//Appp
+commandd too createee a new app iss = python manage.py startapp firstapp afterr creatingg go to myy folder the andd then inn settings.py in INSTALLED_APP= [
+        'firstapp',
+    'secondapp',              // iff i will makee second app alsoo tehn alsoo i will add itt here
+] addd thisss
+
+
+STEP 1: Create a project folder :-WinterPep
+🔹 STEP 2: Create Virtual Environment (env):-  python -cls
+m venv venv
+This creates a separate Python environment
+Keeps Django & packages safe
+Avoids conflicts
+Folder created:
+venv/
+
+🔹 STEP 3: Activate Virtual Environment:- venv\Scripts\activate 
+ You will see:
+(venv)  :-📌 Meaning:👉 Virtual environment is ON ✅
+
+🔹 STEP 4: Install Django:-pip install django
+This installs Django inside venv
+🔹 STEP 5: Upgrade pip (optional but good):-python -m pip install --upgrade pip
+📌 Keeps pip updated
+🔹 STEP 6: Check Django version
+django-admin --version
+
+🔹 STEP 7: Create Django Project
+:- django-admin startproject (myproject= this  will bee youu project namee likee appp1,app2 in placee of myy project)
+
+🔹 STEP 8: Go inside project folder:-cd myproject
+🔹STEP 9: Run Django Server:-python manage.py runserver
+
+
+
+
+🔹 What is an APP in Django?
+👉 App = small part of project
+Example:
+blog
+accounts
+payments
+
+products
+
+📌 One project can have many apps
+
+🔹 STEP 10: Create an App:-python manage.py startapp firstapp
+
+🔹 STEP 11: Register App in settings.py
+Open:
+myproject/settings.py
+✅ Add your app name:
+INSTALLED_APPS = [
+    'django.contrib.admin',
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.messages',
+    'django.contrib.staticfiles',
+    'firstapp',
+    
+]
+
+
+
+
+; ADimin command
+
+
+1️⃣python manage.py makemigrations:- iss iss dongg all thee in buildd collection ittt 
+Django creates migration files (instructions) inside your app’s migrations/ folder.
+
+2️⃣python manage.py migrate:- andd thiss commandd iss trfering too db browser
+“Django, now DO the changes in the database.”
+
+This command:
+Creates tables
+Updates columns
+Works with DB Browser / SQLite / MySQL / PostgreSQL
+
+Command	Does what?
+makemigrations:===Writes instructions
+migrate	:==Executes instructions
+
+3️⃣python manage.py createsuperuser:=Creates admin login credentials
+
+After this, you can log in here:
+http://127.0.0.1:8000/admin/
+
+It asks you:
+Username
+Email
+Password
+
+In simple words:
+“Create the BOSS user who controls everything.”
+
+
+
+🧠Command	Meaning
+makemigrations	“I changed models, save the plan”
+migrate	“Apply plan to database”
+createsuperuser	“Create admin user”
+
+@csrf_exempt
+CSRF = Cross-Site Request Forgery
+👉 It protects your website from fake or dangerous requests.
+
+| Thing        | Meaning             |
+| ------------ | ------------------- |
+| CSRF         | Security protection |
+| CSRF token   | Secret key          |
+| 403 error    | Token missing       |
+| @csrf_exempt | Disable CSRF check  |
+
+
+waht iss DRF: some body ask from thiss namee aboutt django
+
+   <form method="POST" action="{% %}" class="p-6 md:p-8">  :- aagr mereko dusaraa routee pee bhejna hogee toh views mee uss     
+                                                                name see function banayege firr ukee bdd yaha action 
+                                                                me {% yaha pe uss funtion koo likhegee%} tohh firr woo wha redirect  kregee
+                                                                
+#session :=A session in Django keeps the user logged in by storing user data on the server. 
+        ; As long as the session is active, the user does not need to log in again.
+
+        ; ✅ What Actually Happens
+
+        ; When a user logs in to your Django website:
+        ; Django creates a session ID
+        ; That session ID is stored in the browser (cookie)
+        ; The session data is stored on the server
+        ; As long as the session is active → user stays logged in
+
+
+; 📌 Django Session Framework (Simple & Clear Notes)
+; 🔹 What is a Session?
+; In Django, a session is a way to store information about a user after they log in or visit your website.
+; 👉 It helps Django remember the user between different pages.
+
+; Example:
+
+; User logs in → Django remembers them.
+; User adds items to cart → Django remembers the cart.
+; User fills a form → Data can be stored temporarily.
+
+; 🔹 How Django Session Works (Simple Explanation)
+; When a user visits your website, Django creates a unique session ID.
+; That session ID is stored in a cookie in the user's browser.
+; The actual data (cart, login info, etc.) is stored on the server, not in the browser.
+; Every time the user makes a request, Django reads the session ID from the cookie and loads the data from the database.
+
+; 👉 So:
+; 🍪 Cookie → Contains only Session ID
+; 🖥 Server → Stores actual session data
+
+; 🔹 Important Point
+; Django sessions are server-side stored.
+
+; That means:
+; Data is safe.
+; User cannot see or modify it easily.
+; Only session ID is stored in browser cookie.
+
+
+
+
+
+
+#API
+; How to Create an API in Django
+; There are 2 ways:
+
+; Using Normal Django (JsonResponse)
+
+; Using Django REST Framework (Recommended) ✅
+
+; We will use Django REST Framework (DRF) because it is professional and used in real companies.
+
+; 🔥 STEP 1: Install Django REST Framework :-  pip install djangorestframework
+
+; Now add it inside settings.py:
+
+; INSTALLED_APPS = [
+;     ...
+;     'rest_framework',
+; ]
+
+
+; 🔥 STEP 2: Create an App
+; python manage.py startapp api
+
+
+; Add it in settings.py:
+
+; INSTALLED_APPS = [
+;     ...
+;     'api',
+; ]
+
+; 🔥 STEP 3: Create a Model
+
+; Inside api/models.py
+
+; from django.db import models
+
+; class Product(models.Model):
+;     name = models.CharField(max_length=100)
+;     price = models.IntegerField()
+;     description = models.TextField()
+
+;     def __str__(self):
+;         return self.name
+
+
+; Now migrate:
+
+; python manage.py makemigrations
+; python manage.py migrate
+
+
+
+
+# 3 types of APIs
+
+# 🔹 Public API
+# A Public API is available for everyone on the internet.
+
+# Anyone can use it (sometimes with an API key).
+# ✅ Features:
+
+# Accessible publicly
+# Usually needs API key
+# Documentation available
+# Used by external developers
+
+# 🔹 Private API
+# Used inside a company only.
+
+# Not available to the public.
+
+# 💡 Example:
+
+# Suppose Amazon has:
+# Order service
+# Payment service
+# Delivery service
+# ✅ Features:
+
+# Only for internal developers
+# More secure
+# Not publicly documented
+# Used for microservices communication
+
+
+# 🔹 Partner API
+# Shared with specific business partners only.
+
+# Not public. Not fully private.
+# ✅ Features:
+
+# Restricted access
+# Requires agreement
+# API keys + contracts
+# Used for B2B integrations
+
+
+
+; 📦 What is Serialization?
+; 👉 Simple Definition:
+
+; Serialization = Converting Python object → JSON
+
+; In simple words:
+
+; Changing complex data into a format that can be sent over the internet.
+; 🧃 Real Life Example
+
+; Think like this:
+
+; You have water in a steel bottle 🥤
+; But you want to send it to someone.
+
+; So you pour it into a plastic bottle.
+
+; Changing container = Serialization.
+
+
+; 🔄 What is Deserialization?
+; 👉 Simple Definition:
+
+; Deserialization = Converting JSON → Python object
+
+; When user sends data from frontend:
+
+; {
+;   "name": "Phone",
+;   "price": 20000
+; }
+
+
+; Django cannot directly save JSON into database.
+
+; So it converts JSON → Python object → Model object.
+
+
+; 🧃 Real Life Example
+
+; You receive water in plastic bottle.
+; You pour it back into your steel bottle.
+
+; Plastic → Steel = Deserialization.
+
+🟢 1️⃣ 2xx → Success Codes
+| Code | Meaning    | When Used                            |
+| ---- | ---------- | ------------------------------------ |
+| 200  | OK         | GET successful                       |
+| 201  | Created    | POST successful                      |
+| 202  | Accepted   | Request accepted (processing later)  |
+| 204  | No Content | DELETE successful (no data returned) |
+
+
+🟡 2️⃣ 3xx → Redirection Codes
+| Code | Meaning                    |
+| ---- | -------------------------- |
+| 301  | Moved Permanently          |
+| 302  | Found (Temporary redirect) |
+| 304  | Not Modified               |
+
+
+🔴 3️⃣ 4xx → Client Errors
+| Code | Meaning                | Example            |
+| ---- | ---------------------- | ------------------ |
+| 400  | Bad Request            | Invalid data       |
+| 401  | Unauthorized           | Login required     |
+| 403  | Forbidden              | No permission      |
+| 404  | Not Found              | Object not found   |
+| 405  | Method Not Allowed     | Wrong HTTP method  |
+| 409  | Conflict               | Duplicate entry    |
+| 415  | Unsupported Media Type | Wrong content type |
+
+
+⚫ 4️⃣ 5xx → Server Errors
+| Code | Meaning               |
+| ---- | --------------------- |
+| 500  | Internal Server Error |
+| 502  | Bad Gateway           |
+| 503  | Service Unavailable   |
+| 504  | Gateway Timeout       |
