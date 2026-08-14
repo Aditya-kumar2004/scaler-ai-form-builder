@@ -401,10 +401,6 @@ The project has been tested through manual workflows and API testing:
   - Verified that unpublished forms return a 404 on the public API endpoint.
   - Verified successful response submission and response retrieval endpoints.
   - Verified question reordering requests and order persistence.
-- **Browser & End-to-End Testing**:
-  - Verified full creator workflow from form creation to question management.
-  - Verified responsive respondent flow in normal and private browsing modes.
-  - Verified that Next.js builds with zero TypeScript errors or ESLint warnings (`next build`).
 
 ---
 
