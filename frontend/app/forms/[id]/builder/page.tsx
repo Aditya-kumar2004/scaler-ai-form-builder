@@ -27,6 +27,11 @@ interface Form {
   questions?: Question[];
 }
 
+interface Toast {
+  message: string;
+  type: "success" | "error" | "info";
+}
+
 export default function BuilderPage({
   params,
 }: {
@@ -42,6 +47,7 @@ export default function BuilderPage({
   const [required, setRequired] = useState(false);
   const [options, setOptions] = useState<string[]>([]);
   const [optionText, setOptionText] = useState("");
+  const [isSavingQuestion, setIsSavingQuestion] = useState(false);
 
   // Edit Question State
   const [editingQuestionId, setEditingQuestionId] = useState<number | null>(
@@ -52,6 +58,21 @@ export default function BuilderPage({
   const [editRequired, setEditRequired] = useState(false);
   const [editOptions, setEditOptions] = useState<Option[]>([]);
   const [editOptionText, setEditOptionText] = useState("");
+  const [isUpdatingQuestion, setIsUpdatingQuestion] = useState(false);
+
+  // Delete Question Modal State
+  const [deletingQuestion, setDeletingQuestion] = useState<Question | null>(null);
+  const [isDeletingQuestion, setIsDeletingQuestion] = useState(false);
+
+  // Toast Notification State
+  const [toast, setToast] = useState<Toast | null>(null);
+
+  const showToast = (message: string, type: "success" | "error" | "info" = "info") => {
+    setToast({ message, type });
+    setTimeout(() => {
+      setToast((current) => (current?.message === message ? null : current));
+    }, 4000);
+  };
 
   const isChoiceBased =
     questionType === "multiple_choice" || questionType === "dropdown";
@@ -85,6 +106,7 @@ export default function BuilderPage({
         setForm(data);
       } catch (error) {
         console.error("Error loading form:", error);
+        showToast("Error loading form.", "error");
       }
 
       setLoading(false);
@@ -96,7 +118,7 @@ export default function BuilderPage({
   // Option handlers for Add Question
   function addOption() {
     if (optionText.trim() === "") {
-      alert("Option cannot be empty.");
+      showToast("Option text cannot be empty.", "error");
       return;
     }
     setOptions([...options, optionText.trim()]);
@@ -112,16 +134,17 @@ export default function BuilderPage({
     if (!form) return;
 
     if (questionText.trim() === "") {
-      alert("Please enter question text.");
+      showToast("Please enter question text.", "error");
       return;
     }
 
     if (isChoiceBased && options.length === 0) {
-      alert("Please add at least one option for choice questions.");
+      showToast("Please add at least one option for choice questions.", "error");
       return;
     }
 
     try {
+      setIsSavingQuestion(true);
       // Order number for the new question
       const nextOrder = (form.questions?.length || 0) + 1;
 
@@ -135,7 +158,7 @@ export default function BuilderPage({
           },
           body: JSON.stringify({
             form: form.id,
-            question_text: questionText,
+            question_text: questionText.trim(),
             question_type: questionType,
             required: required,
             order: nextOrder,
@@ -146,7 +169,7 @@ export default function BuilderPage({
       if (!response.ok) {
         const errorData = await response.json();
         console.error("Error saving question:", errorData);
-        alert("Failed to save question.");
+        showToast("Failed to save question.", "error");
         return;
       }
 
@@ -190,22 +213,23 @@ export default function BuilderPage({
       setOptions([]);
       setOptionText("");
       setShowAddQuestion(false);
-      alert("Question saved successfully!");
+      showToast("Question saved successfully!", "success");
     } catch (error) {
       console.error("Error saving question:", error);
-      alert("Could not connect to the server.");
+      showToast("Could not connect to the server.", "error");
+    } finally {
+      setIsSavingQuestion(false);
     }
   }
 
-  // Delete Question
-  async function deleteQuestion(questionId: number) {
-    if (!confirm("Are you sure you want to delete this question?")) {
-      return;
-    }
+  // Delete Question confirmation
+  async function confirmDeleteQuestion() {
+    if (!deletingQuestion) return;
 
     try {
+      setIsDeletingQuestion(true);
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/questions/${questionId}/`,
+        `${process.env.NEXT_PUBLIC_API_URL}/questions/${deletingQuestion.id}/`,
         {
           method: "DELETE",
         }
@@ -217,13 +241,16 @@ export default function BuilderPage({
 
       setForm({
         ...form!,
-        questions: (form?.questions || []).filter((q) => q.id !== questionId),
+        questions: (form?.questions || []).filter((q) => q.id !== deletingQuestion.id),
       });
 
-      alert("Question deleted successfully!");
+      setDeletingQuestion(null);
+      showToast("Question deleted successfully!", "success");
     } catch (error) {
       console.error("Error deleting question:", error);
-      alert("Could not delete question.");
+      showToast("Could not delete question.", "error");
+    } finally {
+      setIsDeletingQuestion(false);
     }
   }
 
@@ -249,7 +276,7 @@ export default function BuilderPage({
 
   async function addEditOption(questionId: number) {
     if (editOptionText.trim() === "") {
-      alert("Option text cannot be empty.");
+      showToast("Option text cannot be empty.", "error");
       return;
     }
 
@@ -275,9 +302,10 @@ export default function BuilderPage({
       const newOpt = await response.json();
       setEditOptions([...editOptions, newOpt]);
       setEditOptionText("");
+      showToast("Option added.", "success");
     } catch (err) {
       console.error("Error adding option:", err);
-      alert("Could not add option.");
+      showToast("Could not add option.", "error");
     }
   }
 
@@ -295,9 +323,10 @@ export default function BuilderPage({
       }
 
       setEditOptions(editOptions.filter((opt) => opt.id !== optionId));
+      showToast("Option removed.", "info");
     } catch (err) {
       console.error("Error deleting option:", err);
-      alert("Could not delete option.");
+      showToast("Could not delete option.", "error");
     }
   }
 
@@ -305,16 +334,17 @@ export default function BuilderPage({
     if (!form) return;
 
     if (editQuestionText.trim() === "") {
-      alert("Please enter question text.");
+      showToast("Please enter question text.", "error");
       return;
     }
 
     if (isEditChoiceBased && editOptions.length === 0) {
-      alert("Please add at least one option for choice questions.");
+      showToast("Please add at least one option for choice questions.", "error");
       return;
     }
 
     try {
+      setIsUpdatingQuestion(true);
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/questions/${questionId}/`,
         {
@@ -324,7 +354,7 @@ export default function BuilderPage({
           },
           body: JSON.stringify({
             form: form.id,
-            question_text: editQuestionText,
+            question_text: editQuestionText.trim(),
             question_type: editQuestionType,
             required: editRequired,
           }),
@@ -334,7 +364,7 @@ export default function BuilderPage({
       if (!response.ok) {
         const errorData = await response.json();
         console.error("Error updating question:", errorData);
-        alert("Failed to update question.");
+        showToast("Failed to update question.", "error");
         return;
       }
 
@@ -349,10 +379,12 @@ export default function BuilderPage({
       });
 
       cancelEdit();
-      alert("Question updated successfully!");
+      showToast("Question updated successfully!", "success");
     } catch (error) {
       console.error("Error updating question:", error);
-      alert("Could not update question.");
+      showToast("Could not update question.", "error");
+    } finally {
+      setIsUpdatingQuestion(false);
     }
   }
 
@@ -363,75 +395,58 @@ export default function BuilderPage({
   // Move question UP
   async function moveQuestionUp(index: number) {
     if (!form || !form.questions) return;
-
-    // If it's already the first question, do nothing
     if (index <= 0) return;
 
-    // Step 1: Create a copy of the array (React state should never be modified directly)
     const newQuestions = [...form.questions];
-
-    // Step 2: Swap the current question with the one above it using a temporary variable
     const temp = newQuestions[index];
     newQuestions[index] = newQuestions[index - 1];
     newQuestions[index - 1] = temp;
 
-    // Step 3: Update the order property for each question (1, 2, 3, etc.)
     for (let i = 0; i < newQuestions.length; i++) {
       newQuestions[i].order = i + 1;
     }
 
     const previousQuestions = form.questions;
 
-    // 4. Update UI state immediately
     setForm({
       ...form,
       questions: newQuestions,
     });
 
-    // 5. Save new order to Django using PUT /api/questions/<id>/
     await saveQuestionOrder(newQuestions[index], newQuestions[index - 1], previousQuestions);
   }
 
   // Move a question DOWN by 1 position
   async function moveQuestionDown(index: number) {
     if (!form || !form.questions) return;
-
-    // If last item, do nothing
     if (index >= form.questions.length - 1) return;
 
-    // 1. Copy the questions array
     const newQuestions = [...form.questions];
-
-    // 2. Swap question with the one below it
     const temp = newQuestions[index];
     newQuestions[index] = newQuestions[index + 1];
     newQuestions[index + 1] = temp;
 
-    // 3. Update order numbers (1-based index)
     for (let i = 0; i < newQuestions.length; i++) {
       newQuestions[i].order = i + 1;
     }
 
     const previousQuestions = form.questions;
 
-    // Step 5: Update the React state immediately so user sees the change right away
     setForm({
       ...form,
       questions: newQuestions,
     });
 
-    // 5. Save new order to Django using PUT /api/questions/<id>/
     await saveQuestionOrder(newQuestions[index], newQuestions[index + 1], previousQuestions);
   }
 
-  // Update order for the swapped questions using PUT /api/questions/<id>/
+  // Update order for the swapped questions
   async function saveQuestionOrder(
     q1: Question,
     q2: Question,
     fallbackQuestions: Question[]
   ) {
     try {
-      // Update first question's order in Django
       const res1 = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/questions/${q1.id}/`,
         {
@@ -445,7 +460,6 @@ export default function BuilderPage({
         }
       );
 
-      // Update second question's order in Django
       const res2 = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/questions/${q2.id}/`,
         {
@@ -464,9 +478,8 @@ export default function BuilderPage({
       }
     } catch (error) {
       console.error("Error saving question order:", error);
-      alert("Failed to update question order on server. Reverting back.");
+      showToast("Failed to update question order. Reverting back.", "error");
 
-      // Revert to previous order if request fails
       if (form) {
         setForm({
           ...form,
@@ -478,19 +491,30 @@ export default function BuilderPage({
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-gray-100 p-10">
-        <p>Loading form builder...</p>
+      <main className="min-h-screen bg-slate-50 p-10">
+        <div className="mx-auto max-w-4xl rounded-2xl border border-slate-200 bg-white p-12 text-center text-slate-500 shadow-sm">
+          <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-600">
+            <svg className="h-5 w-5 animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+            </svg>
+          </div>
+          Loading form builder...
+        </div>
       </main>
     );
   }
 
   if (!form) {
     return (
-      <main className="min-h-screen bg-gray-100 p-10">
-        <p>Form not found.</p>
-        <Link href="/dashboard" className="text-blue-600 underline">
-          Back to Dashboard
-        </Link>
+      <main className="min-h-screen bg-slate-50 p-10">
+        <div className="mx-auto max-w-xl rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+          <h1 className="text-2xl font-bold text-slate-900">Form Not Found</h1>
+          <p className="mt-2 text-sm text-slate-500">The form could not be loaded.</p>
+          <Link href="/dashboard" className="mt-4 inline-block rounded-xl bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 transition">
+            Back to Dashboard
+          </Link>
+        </div>
       </main>
     );
   }
@@ -498,85 +522,110 @@ export default function BuilderPage({
   const questions = form.questions || [];
 
   return (
-    <main className="min-h-screen bg-gray-100 p-10">
+    <main className="min-h-screen bg-slate-50 p-6 sm:p-10 text-slate-900">
       <div className="mx-auto max-w-4xl">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-slate-200 pb-6">
           <div>
             <Link
               href="/dashboard"
-              className="text-sm text-gray-500 hover:underline"
+              className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-slate-900 transition"
             >
               &larr; Back to Dashboard
             </Link>
-            <h1 className="mt-2 text-3xl font-bold">{form.title}</h1>
-            <p className="mt-1 text-gray-600">{form.description}</p>
+            <h1 className="mt-2 text-2xl sm:text-3xl font-bold text-slate-900">{form.title}</h1>
+            {form.description && (
+              <p className="mt-1 text-sm text-slate-500">{form.description}</p>
+            )}
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Link
               href={`/forms/${form.id}/responses`}
-              className="rounded border bg-white px-4 py-2 text-sm hover:bg-gray-50 font-medium"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 hover:border-slate-300"
             >
-              View Responses ({form.questions?.length ? `${form.questions.length} questions` : "0 questions"})
+              <svg className="h-4 w-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+              </svg>
+              View Responses ({questions.length} {questions.length === 1 ? "question" : "questions"})
             </Link>
 
             <Link
               href={`/forms/${form.id}`}
               target="_blank"
-              className="rounded bg-black px-4 py-2 text-sm text-white hover:bg-gray-800"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-4 py-2 text-xs font-medium text-white shadow-sm transition hover:bg-slate-800"
             >
+              <svg className="h-4 w-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              </svg>
               Preview Public Form
             </Link>
           </div>
         </div>
 
         {/* Form Questions Section */}
-        <div className="mt-8 rounded-lg bg-white p-6 shadow">
-          <h2 className="text-xl font-semibold">Form Questions Builder</h2>
-          <p className="mt-1 text-gray-600">
-            Add, reorder, and configure the questions for this form.
-          </p>
+        <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 sm:p-8 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-bold text-slate-900">Form Questions Builder</h2>
+              <p className="mt-1 text-xs text-slate-500">
+                Add, reorder, and configure the questions for this form.
+              </p>
+            </div>
 
-          {!showAddQuestion && !editingQuestionId && (
-            <button
-              onClick={() => {
-                setShowAddQuestion(true);
-                setOptions([]);
-                setOptionText("");
-              }}
-              className="mt-6 rounded-lg bg-black px-5 py-3 text-white hover:bg-gray-800"
-            >
-              + Add Question
-            </button>
-          )}
+            {!showAddQuestion && !editingQuestionId && (
+              <button
+                onClick={() => {
+                  setShowAddQuestion(true);
+                  setOptions([]);
+                  setOptionText("");
+                }}
+                className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-xs font-medium text-white shadow-sm transition hover:bg-slate-800"
+              >
+                + Add Question
+              </button>
+            )}
+          </div>
 
-          {/* Add Question Form */}
+          {/* Add Question Card */}
           {showAddQuestion && (
-            <div className="mt-6 rounded-lg border p-5">
-              <h3 className="text-lg font-semibold">Add Question</h3>
+            <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50/50 p-6 shadow-sm animate-in fade-in slide-in-from-top-2 duration-200">
+              <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+                <h3 className="text-base font-bold text-slate-900">Add Question</h3>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowAddQuestion(false);
+                    setOptions([]);
+                    setOptionText("");
+                  }}
+                  className="rounded-lg p-1 text-slate-400 hover:bg-slate-200 hover:text-slate-600 transition"
+                >
+                  ✕
+                </button>
+              </div>
 
               <div className="mt-4">
-                <label className="block text-sm font-medium">
-                  Question Text
+                <label className="block text-xs font-semibold uppercase text-slate-600">
+                  Question Text <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="text"
                   value={questionText}
                   onChange={(e) => setQuestionText(e.target.value)}
-                  placeholder="e.g. What is your preferred contact method?"
-                  className="mt-2 w-full rounded border p-3"
+                  placeholder="e.g. What is your full name?"
+                  className="mt-1.5 w-full rounded-xl border border-slate-300 bg-white p-3 text-sm text-slate-900 placeholder-slate-400 outline-none transition focus:border-slate-900 focus:ring-1 focus:ring-slate-900"
                 />
               </div>
 
               <div className="mt-4">
-                <label className="block text-sm font-medium">
+                <label className="block text-xs font-semibold uppercase text-slate-600">
                   Question Type
                 </label>
                 <select
                   value={questionType}
                   onChange={(e) => setQuestionType(e.target.value)}
-                  className="mt-2 w-full rounded border p-3"
+                  className="mt-1.5 w-full rounded-xl border border-slate-300 bg-white p-3 text-sm text-slate-900 outline-none transition focus:border-slate-900 focus:ring-1 focus:ring-slate-900"
                 >
                   <option value="short_text">Short Text</option>
                   <option value="long_text">Long Text</option>
@@ -590,23 +639,31 @@ export default function BuilderPage({
 
               {/* Options Section */}
               {isChoiceBased && (
-                <div className="mt-4 rounded border bg-gray-50 p-4">
-                  <label className="block text-sm font-medium">Options</label>
+                <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
+                  <label className="block text-xs font-semibold uppercase text-slate-600">
+                    Options <span className="text-red-500">*</span>
+                  </label>
 
                   <div className="mt-2 flex gap-2">
                     <input
                       type="text"
                       value={optionText}
                       onChange={(e) => setOptionText(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          addOption();
+                        }
+                      }}
                       placeholder="Enter an option..."
-                      className="w-full rounded border bg-white p-2 text-sm"
+                      className="w-full rounded-xl border border-slate-300 bg-white p-2.5 text-xs outline-none transition focus:border-slate-900 focus:ring-1 focus:ring-slate-900"
                     />
                     <button
                       type="button"
                       onClick={addOption}
-                      className="rounded bg-black px-4 py-2 text-sm text-white hover:bg-gray-800"
+                      className="rounded-xl bg-slate-900 px-4 py-2 text-xs font-medium text-white hover:bg-slate-800 transition"
                     >
-                      + Add Option
+                      + Add
                     </button>
                   </div>
 
@@ -615,9 +672,9 @@ export default function BuilderPage({
                       {options.map((opt, idx) => (
                         <div
                           key={idx}
-                          className="flex items-center justify-between rounded border bg-white p-2 text-sm"
+                          className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs"
                         >
-                          <span>{opt}</span>
+                          <span className="font-medium text-slate-800">{opt}</span>
                           <button
                             type="button"
                             onClick={() => deleteOption(idx)}
@@ -638,21 +695,14 @@ export default function BuilderPage({
                   id="required-checkbox"
                   checked={required}
                   onChange={(e) => setRequired(e.target.checked)}
+                  className="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-900"
                 />
-                <label htmlFor="required-checkbox" className="text-sm">
-                  Required
+                <label htmlFor="required-checkbox" className="text-xs font-medium text-slate-700 cursor-pointer">
+                  Required field
                 </label>
               </div>
 
-              <div className="mt-6 flex gap-3">
-                <button
-                  type="button"
-                  onClick={saveQuestion}
-                  className="rounded-lg bg-black px-5 py-3 text-white hover:bg-gray-800"
-                >
-                  Save Question
-                </button>
-
+              <div className="mt-6 flex items-center justify-end gap-3 border-t border-slate-200 pt-4">
                 <button
                   type="button"
                   onClick={() => {
@@ -660,9 +710,27 @@ export default function BuilderPage({
                     setOptions([]);
                     setOptionText("");
                   }}
-                  className="rounded-lg border px-5 py-3 hover:bg-gray-100"
+                  className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-xs font-medium text-slate-700 hover:bg-slate-100 transition"
                 >
                   Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={saveQuestion}
+                  disabled={isSavingQuestion}
+                  className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-5 py-2 text-xs font-medium text-white shadow-sm transition hover:bg-slate-800 disabled:opacity-50"
+                >
+                  {isSavingQuestion ? (
+                    <>
+                      <svg className="h-3.5 w-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                      </svg>
+                      Saving...
+                    </>
+                  ) : (
+                    "Save Question"
+                  )}
                 </button>
               </div>
             </div>
@@ -670,113 +738,140 @@ export default function BuilderPage({
 
           {/* List of current questions */}
           <div className="mt-6 space-y-4">
+            {questions.length === 0 && !showAddQuestion && (
+              <div className="rounded-xl border border-dashed border-slate-300 p-8 text-center text-xs text-slate-500">
+                No questions added yet. Click "+ Add Question" above to add your first question.
+              </div>
+            )}
+
             {questions.map((q, idx) => {
               const isEditingThis = editingQuestionId === q.id;
 
               return (
-                <div key={q.id || idx} className="rounded border p-4">
+                <div key={q.id || idx} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-slate-300">
                   {/* Normal Display Mode */}
                   {!isEditingThis ? (
                     <div>
-                      <div className="flex items-center justify-between">
-                        <h4 className="font-semibold">
-                          {idx + 1}. {q.question_text}
-                        </h4>
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="flex items-center gap-2.5">
+                          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-slate-700">
+                            {idx + 1}
+                          </span>
+                          <h4 className="font-semibold text-slate-900 text-sm">
+                            {q.question_text}
+                          </h4>
+                          {q.required && (
+                            <span className="rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-medium text-red-600 border border-red-100">
+                              Required
+                            </span>
+                          )}
+                        </div>
 
                         {/* Action buttons: Move Up, Edit, Delete, Move Down */}
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1.5 self-end sm:self-center">
                           {idx > 0 && (
                             <button
                               type="button"
                               onClick={() => moveQuestionUp(idx)}
-                              className="rounded border px-2.5 py-1 text-xs hover:bg-gray-50"
+                              className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition"
                               title="Move Up"
                             >
-                              Move Up
+                              ↑ Up
+                            </button>
+                          )}
+
+                          {idx < questions.length - 1 && (
+                            <button
+                              type="button"
+                              onClick={() => moveQuestionDown(idx)}
+                              className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition"
+                              title="Move Down"
+                            >
+                              ↓ Down
                             </button>
                           )}
 
                           <button
                             type="button"
                             onClick={() => startEdit(q)}
-                            className="rounded border px-3 py-1 text-xs hover:bg-gray-50"
+                            className="rounded-lg border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition"
                           >
                             Edit
                           </button>
 
                           <button
                             type="button"
-                            onClick={() => deleteQuestion(q.id)}
-                            className="rounded border border-red-200 px-3 py-1 text-xs text-red-600 hover:bg-red-50"
+                            onClick={() => setDeletingQuestion(q)}
+                            className="rounded-lg border border-red-200 bg-white px-3 py-1 text-xs font-medium text-red-600 hover:bg-red-50 hover:border-red-300 transition"
                           >
                             Delete
                           </button>
-
-                          {idx < questions.length - 1 && (
-                            <button
-                              type="button"
-                              onClick={() => moveQuestionDown(idx)}
-                              className="rounded border px-2.5 py-1 text-xs hover:bg-gray-50"
-                              title="Move Down"
-                            >
-                              Move Down
-                            </button>
-                          )}
                         </div>
                       </div>
 
-                      <p className="mt-1 text-xs text-gray-500 capitalize">
-                        Type: {q.question_type.replace("_", " ")}
-                        {q.required && " • Required"}
+                      <p className="mt-2 text-xs text-slate-500 capitalize">
+                        Type: <span className="font-medium text-slate-700">{q.question_type.replace("_", " ")}</span>
                       </p>
 
                       {/* Display existing options */}
                       {q.options && q.options.length > 0 && (
-                        <div className="mt-2 pl-4">
-                          <p className="text-xs font-medium text-gray-500">
-                            Options:
+                        <div className="mt-3 rounded-xl border border-slate-100 bg-slate-50/50 p-3">
+                          <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+                            Options ({q.options.length}):
                           </p>
-                          <ul className="mt-1 list-disc list-inside text-sm text-gray-700">
+                          <div className="mt-1.5 flex flex-wrap gap-1.5">
                             {q.options.map((opt) => (
-                              <li key={opt.id}>{opt.option_text}</li>
+                              <span
+                                key={opt.id}
+                                className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-700 shadow-2xs"
+                              >
+                                {opt.option_text}
+                              </span>
                             ))}
-                          </ul>
+                          </div>
                         </div>
                       )}
                     </div>
                   ) : (
-                    /* Edit Mode Form */
-                    <div className="space-y-4">
-                      <h3 className="text-base font-semibold">
-                        Edit Question {idx + 1}
-                      </h3>
+                    /* Edit Mode Form Card */
+                    <div className="space-y-4 rounded-xl bg-slate-50/60 p-4 border border-slate-200">
+                      <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                        <h3 className="text-sm font-bold text-slate-900">
+                          Edit Question {idx + 1}
+                        </h3>
+                        <button
+                          type="button"
+                          onClick={cancelEdit}
+                          className="text-xs text-slate-400 hover:text-slate-600"
+                        >
+                          ✕
+                        </button>
+                      </div>
 
                       <div>
-                        <label className="block text-sm font-medium">
-                          Question Text
+                        <label className="block text-xs font-semibold uppercase text-slate-600">
+                          Question Text <span className="text-red-500">*</span>
                         </label>
                         <input
                           type="text"
                           value={editQuestionText}
                           onChange={(e) => setEditQuestionText(e.target.value)}
-                          className="mt-1 w-full rounded border p-2 text-sm"
+                          className="mt-1 w-full rounded-xl border border-slate-300 bg-white p-2.5 text-xs text-slate-900 outline-none transition focus:border-slate-900 focus:ring-1 focus:ring-slate-900"
                         />
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium">
+                        <label className="block text-xs font-semibold uppercase text-slate-600">
                           Question Type
                         </label>
                         <select
                           value={editQuestionType}
                           onChange={(e) => setEditQuestionType(e.target.value)}
-                          className="mt-1 w-full rounded border p-2 text-sm"
+                          className="mt-1 w-full rounded-xl border border-slate-300 bg-white p-2.5 text-xs text-slate-900 outline-none transition focus:border-slate-900 focus:ring-1 focus:ring-slate-900"
                         >
                           <option value="short_text">Short Text</option>
                           <option value="long_text">Long Text</option>
-                          <option value="multiple_choice">
-                            Multiple Choice
-                          </option>
+                          <option value="multiple_choice">Multiple Choice</option>
                           <option value="dropdown">Dropdown</option>
                           <option value="email">Email</option>
                           <option value="number">Number</option>
@@ -786,8 +881,8 @@ export default function BuilderPage({
 
                       {/* Edit Options Section */}
                       {isEditChoiceBased && (
-                        <div className="rounded border bg-gray-50 p-3">
-                          <label className="block text-xs font-medium text-gray-700">
+                        <div className="rounded-xl border border-slate-200 bg-white p-3">
+                          <label className="block text-xs font-semibold uppercase text-slate-600">
                             Options
                           </label>
 
@@ -795,16 +890,20 @@ export default function BuilderPage({
                             <input
                               type="text"
                               value={editOptionText}
-                              onChange={(e) =>
-                                setEditOptionText(e.target.value)
-                              }
+                              onChange={(e) => setEditOptionText(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  e.preventDefault();
+                                  addEditOption(q.id);
+                                }
+                              }}
                               placeholder="Enter option..."
-                              className="w-full rounded border bg-white p-1.5 text-xs"
+                              className="w-full rounded-xl border border-slate-300 bg-white p-2 text-xs outline-none transition focus:border-slate-900 focus:ring-1 focus:ring-slate-900"
                             />
                             <button
                               type="button"
                               onClick={() => addEditOption(q.id)}
-                              className="rounded bg-black px-3 py-1 text-xs text-white"
+                              className="rounded-xl bg-slate-900 px-3 py-1 text-xs text-white hover:bg-slate-800 transition"
                             >
                               + Add
                             </button>
@@ -815,13 +914,13 @@ export default function BuilderPage({
                               {editOptions.map((opt) => (
                                 <div
                                   key={opt.id}
-                                  className="flex items-center justify-between rounded border bg-white px-2.5 py-1 text-xs"
+                                  className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs"
                                 >
-                                  <span>{opt.option_text}</span>
+                                  <span className="text-slate-800">{opt.option_text}</span>
                                   <button
                                     type="button"
                                     onClick={() => deleteEditOption(opt.id)}
-                                    className="text-red-600 hover:text-red-800"
+                                    className="text-xs text-red-600 hover:text-red-800 font-medium"
                                   >
                                     Delete
                                   </button>
@@ -838,29 +937,31 @@ export default function BuilderPage({
                           id={`edit-required-${q.id}`}
                           checked={editRequired}
                           onChange={(e) => setEditRequired(e.target.checked)}
+                          className="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-900"
                         />
                         <label
                           htmlFor={`edit-required-${q.id}`}
-                          className="text-xs"
+                          className="text-xs font-medium text-slate-700 cursor-pointer"
                         >
-                          Required
+                          Required field
                         </label>
                       </div>
 
-                      <div className="flex gap-2">
-                        <button
-                          type="button"
-                          onClick={() => updateQuestion(q.id)}
-                          className="rounded bg-black px-4 py-2 text-xs text-white"
-                        >
-                          Save Changes
-                        </button>
+                      <div className="flex items-center justify-end gap-2 border-t border-slate-200 pt-3">
                         <button
                           type="button"
                           onClick={cancelEdit}
-                          className="rounded border px-4 py-2 text-xs"
+                          className="rounded-xl border border-slate-300 bg-white px-3.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 transition"
                         >
                           Cancel
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => updateQuestion(q.id)}
+                          disabled={isUpdatingQuestion}
+                          className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-1.5 text-xs font-medium text-white shadow-sm transition hover:bg-slate-800 disabled:opacity-50"
+                        >
+                          {isUpdatingQuestion ? "Saving..." : "Save Changes"}
                         </button>
                       </div>
                     </div>
@@ -871,6 +972,77 @@ export default function BuilderPage({
           </div>
         </div>
       </div>
+
+      {/* =========================================
+          DELETE QUESTION CARD MODAL
+         ========================================= */}
+      {deletingQuestion && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm animate-in fade-in duration-200">
+          <div
+            className="relative w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl ring-1 ring-slate-900/10 transition-all sm:p-7"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start gap-4">
+              <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl bg-red-50 text-red-600 border border-red-100">
+                <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-bold text-slate-900">Delete Question</h3>
+                <p className="mt-1 text-sm text-slate-600 leading-relaxed">
+                  Are you sure you want to delete <span className="font-semibold text-slate-900">"{deletingQuestion.question_text}"</span>?
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-6 flex items-center justify-end gap-3 border-t border-slate-100 pt-4">
+              <button
+                type="button"
+                onClick={() => setDeletingQuestion(null)}
+                disabled={isDeletingQuestion}
+                className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmDeleteQuestion}
+                disabled={isDeletingQuestion}
+                className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-5 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-red-700 disabled:opacity-50"
+              >
+                {isDeletingQuestion ? "Deleting..." : "Delete Question"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================
+          CARD TOAST NOTIFICATION
+         ========================================= */}
+      {toast && (
+        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3 rounded-2xl border border-slate-200 bg-white/95 px-4 py-3 shadow-xl backdrop-blur-md transition-all animate-in slide-in-from-bottom-5 duration-300 max-w-sm">
+          <div
+            className={`h-2.5 w-2.5 rounded-full flex-shrink-0 ${
+              toast.type === "success"
+                ? "bg-emerald-500 ring-4 ring-emerald-100"
+                : toast.type === "error"
+                ? "bg-red-500 ring-4 ring-red-100"
+                : "bg-blue-500 ring-4 ring-blue-100"
+            }`}
+          />
+          <p className="text-sm font-medium text-slate-800 flex-1">{toast.message}</p>
+          <button
+            onClick={() => setToast(null)}
+            className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition"
+          >
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      )}
     </main>
   );
 }
