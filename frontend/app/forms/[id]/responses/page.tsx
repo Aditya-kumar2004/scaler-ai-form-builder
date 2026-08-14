@@ -179,37 +179,37 @@ export default function FormResponsesPage({
               No responses have been submitted for this form yet.
             </div>
           ) : (
-            <div className="mt-4 overflow-hidden rounded-xl border bg-white shadow-sm">
-              <table className="w-full text-left text-sm">
+            <div className="mt-4 overflow-x-auto rounded-xl border bg-white shadow-sm">
+              <table className="w-full text-left text-sm min-w-[500px]">
                 <thead className="border-b bg-gray-50 text-xs font-semibold text-gray-500 uppercase">
                   <tr>
-                    <th className="px-6 py-3.5">#</th>
-                    <th className="px-6 py-3.5">Submitted At</th>
-                    <th className="px-6 py-3.5">Answers Preview</th>
-                    <th className="px-6 py-3.5 text-right">Action</th>
+                    <th className="px-3 sm:px-6 py-3.5">#</th>
+                    <th className="px-3 sm:px-6 py-3.5">Submitted At</th>
+                    <th className="px-3 sm:px-6 py-3.5">Answers Preview</th>
+                    <th className="px-3 sm:px-6 py-3.5 text-right">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {responses.map((resp, idx) => (
                     <tr key={resp.id} className="hover:bg-gray-50 transition">
-                      <td className="px-6 py-4 font-semibold text-gray-900">
+                      <td className="px-3 sm:px-6 py-4 font-semibold text-gray-900">
                         {idx + 1}
                       </td>
-                      <td className="px-6 py-4 text-gray-600 text-xs">
+                      <td className="px-3 sm:px-6 py-4 text-gray-600 text-xs whitespace-nowrap">
                         {new Date(resp.submitted_at).toLocaleString()}
                       </td>
-                      <td className="px-6 py-4 text-xs text-gray-700 max-w-md truncate">
+                      <td className="px-3 sm:px-6 py-4 text-xs text-gray-700 max-w-xs sm:max-w-md truncate">
                         {resp.answers && resp.answers.length > 0
                           ? resp.answers
                               .map((a) => `${a.question_text || "Answer"}: ${a.answer_text}`)
                               .join(" • ")
                           : "Empty response"}
                       </td>
-                      <td className="px-6 py-4 text-right">
+                      <td className="px-3 sm:px-6 py-4 text-right whitespace-nowrap">
                         <button
                           type="button"
                           onClick={() => setSelectedResponse(resp)}
-                          className="rounded border px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-100 transition"
+                          className="rounded border px-3 py-1.5 text-xs font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 border-blue-200 transition active:scale-95"
                         >
                           View Details
                         </button>

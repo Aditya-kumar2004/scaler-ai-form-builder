@@ -717,7 +717,7 @@ export default function Dashboard() {
               <div className="flex-1">
                 <h3 className="text-lg font-bold text-slate-900">Delete Form</h3>
                 <p className="mt-1 text-sm text-slate-600 leading-relaxed">
-                  Are you sure you want to delete <span className="font-semibold text-slate-900">"{deletingForm.title}"</span>? This will permanently delete the form and all its submitted responses.
+                  Are you sure you want to delete <span className="font-semibold text-slate-900">&quot;{deletingForm.title}&quot;</span>? This will permanently delete the form and all its submitted responses.
                 </p>
               </div>
             </div>
