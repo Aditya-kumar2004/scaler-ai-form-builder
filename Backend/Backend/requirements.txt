@@ -1,3 +1,5 @@
 Django==6.1
 djangorestframework==3.18.0
-corsheaders==5.1.0  
+django-cors-headers==4.7.0
+gunicorn==21.2.0
+whitenoise==6.6.0  
