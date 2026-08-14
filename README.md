@@ -161,12 +161,19 @@ Scaler Ai Labs/
    pip install -r requirements.txt
    ```
 
-5. Apply database migrations:
+5. Make and apply database migrations:
    ```bash
+   python manage.py makemigrations
    python manage.py migrate
    ```
 
-6. Start the Django backend server:
+6. (Optional) Create a superuser / admin account to access the Django admin portal:
+   ```bash
+   python manage.py createsuperuser
+   ```
+   *Follow the terminal prompts to enter your username, email, and password. You can then access the Django Admin at `http://127.0.0.1:8000/admin`.*
+
+7. Start the Django backend server:
    ```bash
    python manage.py runserver
    ```
