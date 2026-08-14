@@ -1022,7 +1022,7 @@ export default function BuilderPage({
               <div className="flex-1">
                 <h3 className="text-lg font-bold text-slate-900">Delete Question</h3>
                 <p className="mt-1 text-sm text-slate-600 leading-relaxed">
-                  Are you sure you want to delete <span className="font-semibold text-slate-900">"{deletingQuestion.question_text}"</span>?
+                  Are you sure you want to delete <span className="font-semibold text-slate-900">&quot;{deletingQuestion.question_text}&quot;</span>?
                 </p>
               </div>
             </div>
