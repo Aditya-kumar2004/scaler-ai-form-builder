@@ -25,9 +25,10 @@ interface Form {
   questions: Question[];
 }
 
-interface Toast {
+interface ModalAlert {
+  title: string;
   message: string;
-  type: "success" | "error" | "info";
+  type: "success" | "error" | "info" | "warning";
 }
 
 export default function PublicForm({
@@ -41,13 +42,26 @@ export default function PublicForm({
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [submitted, setSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [toast, setToast] = useState<Toast | null>(null);
+  const [modalAlert, setModalAlert] = useState<ModalAlert | null>(null);
 
-  const showToast = (message: string, type: "success" | "error" | "info" = "info") => {
-    setToast({ message, type });
-    setTimeout(() => {
-      setToast((current) => (current?.message === message ? null : current));
-    }, 4000);
+  const showAlert = (
+    message: string,
+    type: "success" | "error" | "info" | "warning" = "info",
+    title?: string
+  ) => {
+    const defaultTitle =
+      type === "error"
+        ? "Error"
+        : type === "success"
+        ? "Success"
+        : type === "warning"
+        ? "Warning"
+        : "Notice";
+    setModalAlert({
+      title: title || defaultTitle,
+      message,
+      type,
+    });
   };
 
   // Fetch form from Django backend
@@ -76,7 +90,7 @@ export default function PublicForm({
         setForm(data);
       } catch (error) {
         console.error("Error loading form:", error);
-        showToast("Error loading form.", "error");
+        showAlert("Could not load form from server.", "error");
       }
 
       setLoading(false);
@@ -167,7 +181,7 @@ export default function PublicForm({
     const answer = answers[question.id];
 
     if (question.required && (!answer || answer.trim() === "")) {
-      showToast("Please answer this required question before continuing.", "error");
+      showAlert("Please provide an answer to this required question before continuing.", "warning", "Answer Required");
       return;
     }
 
@@ -181,7 +195,7 @@ export default function PublicForm({
     const answer = answers[question.id];
 
     if (question.required && (!answer || answer.trim() === "")) {
-      showToast("Please answer this required question before submitting.", "error");
+      showAlert("Please provide an answer to this required question before submitting.", "warning", "Answer Required");
       return;
     }
 
@@ -215,14 +229,14 @@ export default function PublicForm({
           (Array.isArray(data.non_field_errors) && data.non_field_errors[0]) ||
           (Array.isArray(data) && data[0]) ||
           (typeof data === "string" ? data : JSON.stringify(data));
-        showToast(`Failed to submit form: ${errorMessage}`, "error");
+        showAlert(`Failed to submit form:\n${errorMessage}`, "error", "Submission Failed");
         return;
       }
 
       setSubmitted(true);
     } catch (error) {
       console.error("Submit error:", error);
-      showToast("Something went wrong while submitting. Please try again.", "error");
+      showAlert("Something went wrong while submitting. Please try again.", "error");
     } finally {
       setIsSubmitting(false);
     }
@@ -431,28 +445,60 @@ export default function PublicForm({
       </div>
 
       {/* =========================================
-          CARD TOAST NOTIFICATION
+          POPUP ALERT CARD (MODAL REPLACING ALERT)
          ========================================= */}
-      {toast && (
-        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3 rounded-2xl border border-slate-200 bg-white/95 px-4 py-3 shadow-xl backdrop-blur-md transition-all animate-in slide-in-from-bottom-5 duration-300 max-w-sm">
+      {modalAlert && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm animate-in fade-in duration-200">
           <div
-            className={`h-2.5 w-2.5 rounded-full flex-shrink-0 ${
-              toast.type === "success"
-                ? "bg-emerald-500 ring-4 ring-emerald-100"
-                : toast.type === "error"
-                ? "bg-red-500 ring-4 ring-red-100"
-                : "bg-blue-500 ring-4 ring-blue-100"
-            }`}
-          />
-          <p className="text-xs font-medium text-slate-800 flex-1">{toast.message}</p>
-          <button
-            onClick={() => setToast(null)}
-            className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition"
+            className="relative w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl ring-1 ring-slate-900/10 text-center animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
           >
-            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+            <div
+              className={`mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl ${
+                modalAlert.type === "success"
+                  ? "bg-emerald-50 text-emerald-600 border border-emerald-100"
+                  : modalAlert.type === "error"
+                  ? "bg-red-50 text-red-600 border border-red-100"
+                  : modalAlert.type === "warning"
+                  ? "bg-amber-50 text-amber-600 border border-amber-100"
+                  : "bg-blue-50 text-blue-600 border border-blue-100"
+              }`}
+            >
+              {modalAlert.type === "success" && (
+                <svg className="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              )}
+              {modalAlert.type === "error" && (
+                <svg className="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              )}
+              {modalAlert.type === "warning" && (
+                <svg className="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              )}
+              {modalAlert.type === "info" && (
+                <svg className="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              )}
+            </div>
+
+            <h3 className="text-lg font-bold text-slate-900">{modalAlert.title}</h3>
+            <p className="mt-2 text-sm text-slate-600 leading-relaxed">{modalAlert.message}</p>
+
+            <div className="mt-6">
+              <button
+                type="button"
+                onClick={() => setModalAlert(null)}
+                className="w-full rounded-xl bg-slate-900 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-slate-800 transition active:scale-98"
+              >
+                Okay
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </main>

@@ -27,9 +27,10 @@ interface Form {
   questions?: Question[];
 }
 
-interface Toast {
+interface ModalAlert {
+  title: string;
   message: string;
-  type: "success" | "error" | "info";
+  type: "success" | "error" | "info" | "warning";
 }
 
 export default function BuilderPage({
@@ -64,14 +65,27 @@ export default function BuilderPage({
   const [deletingQuestion, setDeletingQuestion] = useState<Question | null>(null);
   const [isDeletingQuestion, setIsDeletingQuestion] = useState(false);
 
-  // Toast Notification State
-  const [toast, setToast] = useState<Toast | null>(null);
+  // Card Alert Modal State (replaces all browser alerts)
+  const [modalAlert, setModalAlert] = useState<ModalAlert | null>(null);
 
-  const showToast = (message: string, type: "success" | "error" | "info" = "info") => {
-    setToast({ message, type });
-    setTimeout(() => {
-      setToast((current) => (current?.message === message ? null : current));
-    }, 4000);
+  const showAlert = (
+    message: string,
+    type: "success" | "error" | "info" | "warning" = "info",
+    title?: string
+  ) => {
+    const defaultTitle =
+      type === "error"
+        ? "Error"
+        : type === "success"
+        ? "Success"
+        : type === "warning"
+        ? "Warning"
+        : "Notice";
+    setModalAlert({
+      title: title || defaultTitle,
+      message,
+      type,
+    });
   };
 
   const isChoiceBased =
@@ -106,7 +120,7 @@ export default function BuilderPage({
         setForm(data);
       } catch (error) {
         console.error("Error loading form:", error);
-        showToast("Error loading form.", "error");
+        showAlert("Could not load form from server.", "error");
       }
 
       setLoading(false);
@@ -118,7 +132,7 @@ export default function BuilderPage({
   // Option handlers for Add Question
   function addOption() {
     if (optionText.trim() === "") {
-      showToast("Option text cannot be empty.", "error");
+      showAlert("Option text cannot be empty.", "warning", "Missing Option");
       return;
     }
     setOptions([...options, optionText.trim()]);
@@ -134,12 +148,16 @@ export default function BuilderPage({
     if (!form) return;
 
     if (questionText.trim() === "") {
-      showToast("Please enter question text.", "error");
+      showAlert("Please enter question text before saving.", "warning", "Missing Question Text");
       return;
     }
 
     if (isChoiceBased && options.length === 0) {
-      showToast("Please add at least one option for choice questions.", "error");
+      showAlert(
+        "Please add at least one option for choice questions.",
+        "warning",
+        "Options Required"
+      );
       return;
     }
 
@@ -160,6 +178,7 @@ export default function BuilderPage({
             form: form.id,
             question_text: questionText.trim(),
             question_type: questionType,
+            description: "",
             required: required,
             order: nextOrder,
           }),
@@ -167,9 +186,19 @@ export default function BuilderPage({
       );
 
       if (!response.ok) {
-        const errorData = await response.json();
-        console.error("Error saving question:", errorData);
-        showToast("Failed to save question.", "error");
+        let errDetail = "Failed to save question.";
+        try {
+          const errorData = await response.json();
+          console.error("Error saving question:", errorData);
+          if (errorData.detail) {
+            errDetail = errorData.detail;
+          } else if (typeof errorData === "object") {
+            errDetail = Object.entries(errorData)
+              .map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(", ") : v}`)
+              .join(" | ");
+          }
+        } catch {}
+        showAlert(errDetail, "error", "Failed to Save Question");
         return;
       }
 
@@ -178,7 +207,8 @@ export default function BuilderPage({
 
       // 2. If choice-based, create each option in Django
       if (isChoiceBased) {
-        for (const opt of options) {
+        for (let i = 0; i < options.length; i++) {
+          const opt = options[i];
           const optResponse = await fetch(
             `${process.env.NEXT_PUBLIC_API_URL}/options/`,
             {
@@ -189,6 +219,7 @@ export default function BuilderPage({
               body: JSON.stringify({
                 question: newQuestion.id,
                 option_text: opt,
+                order: i + 1,
               }),
             }
           );
@@ -196,6 +227,8 @@ export default function BuilderPage({
           if (optResponse.ok) {
             const savedOption = await optResponse.json();
             newQuestion.options.push(savedOption);
+          } else {
+            console.error("Option save error:", await optResponse.json().catch(() => ({})));
           }
         }
       }
@@ -213,10 +246,10 @@ export default function BuilderPage({
       setOptions([]);
       setOptionText("");
       setShowAddQuestion(false);
-      showToast("Question saved successfully!", "success");
+      showAlert("Question has been added to your form!", "success", "Question Saved");
     } catch (error) {
       console.error("Error saving question:", error);
-      showToast("Could not connect to the server.", "error");
+      showAlert("Could not connect to the server. Please check your network connection.", "error");
     } finally {
       setIsSavingQuestion(false);
     }
@@ -245,10 +278,10 @@ export default function BuilderPage({
       });
 
       setDeletingQuestion(null);
-      showToast("Question deleted successfully!", "success");
+      showAlert("The question has been removed from this form.", "success", "Question Deleted");
     } catch (error) {
       console.error("Error deleting question:", error);
-      showToast("Could not delete question.", "error");
+      showAlert("Could not delete question. Please try again.", "error");
     } finally {
       setIsDeletingQuestion(false);
     }
@@ -276,11 +309,12 @@ export default function BuilderPage({
 
   async function addEditOption(questionId: number) {
     if (editOptionText.trim() === "") {
-      showToast("Option text cannot be empty.", "error");
+      showAlert("Option text cannot be empty.", "warning", "Missing Option");
       return;
     }
 
     try {
+      const nextOrder = (editOptions.length || 0) + 1;
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL}/options/`,
         {
@@ -291,6 +325,7 @@ export default function BuilderPage({
           body: JSON.stringify({
             question: questionId,
             option_text: editOptionText.trim(),
+            order: nextOrder,
           }),
         }
       );
@@ -302,10 +337,9 @@ export default function BuilderPage({
       const newOpt = await response.json();
       setEditOptions([...editOptions, newOpt]);
       setEditOptionText("");
-      showToast("Option added.", "success");
     } catch (err) {
       console.error("Error adding option:", err);
-      showToast("Could not add option.", "error");
+      showAlert("Could not add option. Please try again.", "error");
     }
   }
 
@@ -323,10 +357,9 @@ export default function BuilderPage({
       }
 
       setEditOptions(editOptions.filter((opt) => opt.id !== optionId));
-      showToast("Option removed.", "info");
     } catch (err) {
       console.error("Error deleting option:", err);
-      showToast("Could not delete option.", "error");
+      showAlert("Could not delete option.", "error");
     }
   }
 
@@ -334,12 +367,16 @@ export default function BuilderPage({
     if (!form) return;
 
     if (editQuestionText.trim() === "") {
-      showToast("Please enter question text.", "error");
+      showAlert("Please enter question text.", "warning", "Missing Question Text");
       return;
     }
 
     if (isEditChoiceBased && editOptions.length === 0) {
-      showToast("Please add at least one option for choice questions.", "error");
+      showAlert(
+        "Please add at least one option for choice questions.",
+        "warning",
+        "Options Required"
+      );
       return;
     }
 
@@ -364,7 +401,7 @@ export default function BuilderPage({
       if (!response.ok) {
         const errorData = await response.json();
         console.error("Error updating question:", errorData);
-        showToast("Failed to update question.", "error");
+        showAlert("Failed to update question on the server.", "error");
         return;
       }
 
@@ -379,20 +416,16 @@ export default function BuilderPage({
       });
 
       cancelEdit();
-      showToast("Question updated successfully!", "success");
+      showAlert("Question details updated successfully!", "success", "Question Updated");
     } catch (error) {
       console.error("Error updating question:", error);
-      showToast("Could not update question.", "error");
+      showAlert("Could not update question.", "error");
     } finally {
       setIsUpdatingQuestion(false);
     }
   }
 
-  // ==========================================
-  // QUESTION REORDERING (MOVE UP / MOVE DOWN)
-  // ==========================================
-
-  // Move question UP
+  // Question reordering
   async function moveQuestionUp(index: number) {
     if (!form || !form.questions) return;
     if (index <= 0) return;
@@ -416,7 +449,6 @@ export default function BuilderPage({
     await saveQuestionOrder(newQuestions[index], newQuestions[index - 1], previousQuestions);
   }
 
-  // Move a question DOWN by 1 position
   async function moveQuestionDown(index: number) {
     if (!form || !form.questions) return;
     if (index >= form.questions.length - 1) return;
@@ -440,7 +472,6 @@ export default function BuilderPage({
     await saveQuestionOrder(newQuestions[index], newQuestions[index + 1], previousQuestions);
   }
 
-  // Update order for the swapped questions
   async function saveQuestionOrder(
     q1: Question,
     q2: Question,
@@ -478,7 +509,7 @@ export default function BuilderPage({
       }
     } catch (error) {
       console.error("Error saving question order:", error);
-      showToast("Failed to update question order. Reverting back.", "error");
+      showAlert("Failed to update question order on server.", "error");
 
       if (form) {
         setForm({
@@ -1019,28 +1050,60 @@ export default function BuilderPage({
       )}
 
       {/* =========================================
-          CARD TOAST NOTIFICATION
+          POPUP ALERT CARD (MODAL REPLACING ALERT)
          ========================================= */}
-      {toast && (
-        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3 rounded-2xl border border-slate-200 bg-white/95 px-4 py-3 shadow-xl backdrop-blur-md transition-all animate-in slide-in-from-bottom-5 duration-300 max-w-sm">
+      {modalAlert && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm animate-in fade-in duration-200">
           <div
-            className={`h-2.5 w-2.5 rounded-full flex-shrink-0 ${
-              toast.type === "success"
-                ? "bg-emerald-500 ring-4 ring-emerald-100"
-                : toast.type === "error"
-                ? "bg-red-500 ring-4 ring-red-100"
-                : "bg-blue-500 ring-4 ring-blue-100"
-            }`}
-          />
-          <p className="text-sm font-medium text-slate-800 flex-1">{toast.message}</p>
-          <button
-            onClick={() => setToast(null)}
-            className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition"
+            className="relative w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl ring-1 ring-slate-900/10 text-center animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
           >
-            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
+            <div
+              className={`mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl ${
+                modalAlert.type === "success"
+                  ? "bg-emerald-50 text-emerald-600 border border-emerald-100"
+                  : modalAlert.type === "error"
+                  ? "bg-red-50 text-red-600 border border-red-100"
+                  : modalAlert.type === "warning"
+                  ? "bg-amber-50 text-amber-600 border border-amber-100"
+                  : "bg-blue-50 text-blue-600 border border-blue-100"
+              }`}
+            >
+              {modalAlert.type === "success" && (
+                <svg className="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              )}
+              {modalAlert.type === "error" && (
+                <svg className="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              )}
+              {modalAlert.type === "warning" && (
+                <svg className="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              )}
+              {modalAlert.type === "info" && (
+                <svg className="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              )}
+            </div>
+
+            <h3 className="text-lg font-bold text-slate-900">{modalAlert.title}</h3>
+            <p className="mt-2 text-sm text-slate-600 leading-relaxed">{modalAlert.message}</p>
+
+            <div className="mt-6">
+              <button
+                type="button"
+                onClick={() => setModalAlert(null)}
+                className="w-full rounded-xl bg-slate-900 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-slate-800 transition active:scale-98"
+              >
+                Okay
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </main>
