@@ -231,13 +231,6 @@ async function unpublishForm(formId: number) {
   }
 }
 
-  // Share Form
-  function shareForm(formId: number) {
-    const url = `${window.location.origin}/forms/${formId}`;
-    navigator.clipboard.writeText(url);
-    alert(`Public form link copied to clipboard!\n\n${url}`);
-    window.open(url, "_blank");
-  }
 
   return (
     <main className="min-h-screen bg-slate-50 text-slate-900">
@@ -463,17 +456,16 @@ async function unpublishForm(formId: number) {
                       )}
 
                       {form.status === "published" && (
-                        <button
-                          onClick={() => shareForm(form.id)}
+                        <Link
+                          href={`/forms/${form.id}`}
                           className="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-white px-3 py-1.5 text-xs font-medium text-blue-700 shadow-sm transition hover:bg-blue-50 hover:border-blue-300 active:scale-95"
-                          title="Share / Copy Public Form Link"
-                          >
-
+                          title="Open Form in this tab"
+                        >
                           <svg className="h-3.5 w-3.5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/>
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
                           </svg>
-                          Share
-                        </button>
+                          Open Form
+                        </Link>
                       )}
 
                       <button
