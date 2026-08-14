@@ -454,14 +454,3 @@ Deployment URLs will be added after deployment:
   - `Backend/Backend/` (Django + DRF backend)
   - `frontend/` (Next.js + Tailwind CSS frontend)
 
----
-
-## Evaluation / Interview Points
-
-During technical evaluation, the following topics can be discussed:
-
-1. **Client-Server Architecture**: Decoupled Next.js client communicating over REST APIs with Django.
-2. **Relational Data Model**: Structured relationships across `Form`, `Question`, `QuestionOption`, `Response`, and `Answer` models.
-3. **Form Duplication Logic**: Backend implementation that duplicates a form, its questions, and their options in a single request.
-4. **Question Reordering**: Batch reordering of question sequences via a dedicated `PATCH` endpoint.
-5. **State Management**: Managing active question indices and answer state in React during multi-step form completion.
