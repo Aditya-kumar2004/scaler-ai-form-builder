@@ -771,7 +771,7 @@ export default function BuilderPage({
           <div className="mt-6 space-y-4">
             {questions.length === 0 && !showAddQuestion && (
               <div className="rounded-xl border border-dashed border-slate-300 p-8 text-center text-xs text-slate-500">
-                No questions added yet. Click "+ Add Question" above to add your first question.
+                No questions added yet. Click &quot;+ Add Question&quot; above to add your first question.
               </div>
             )}
 
